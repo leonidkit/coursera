@@ -13,6 +13,7 @@ import (
 func FastSearch(out io.Writer) {
 	uniqueBrowsers := map[string]bool{}
 	var buf bytes.Buffer
+	var user = &User{}
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -20,21 +21,12 @@ func FastSearch(out io.Writer) {
 	}
 	defer file.Close()
 
-	rd := bufio.NewReader(file)
+	rd := bufio.NewScanner(file)
 
 	fmt.Fprintln(out, "found users:")
 
-	for i := 0; ; i++ {
-		line, err := rd.ReadBytes('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			fmt.Printf("error reading file %s", err)
-		}
-
-		var user = &User{}
-		err = user.UnmarshalJSON(line)
+	for i := 0; rd.Scan(); i++ {
+		err = user.UnmarshalJSON(rd.Bytes())
 		if err != nil {
 			panic(err)
 		}
@@ -61,13 +53,11 @@ func FastSearch(out io.Writer) {
 
 		email := strings.Replace(user.Email, "@", " [at] ", -1)
 
-		buf.WriteString("[" + strconv.Itoa(i) + "] ")
-		buf.WriteString(user.Name)
-		buf.WriteString(" <" + email + ">\n")
+		buf.WriteString("[" + strconv.Itoa(i) + "] " + user.Name + " <" + email + ">\n")
 	}
 
+	buf.WriteString("\nTotal unique browsers " + strconv.Itoa(len(uniqueBrowsers)) + "\n")
 	fmt.Fprint(out, buf.String())
-	fmt.Fprintln(out, "\nTotal unique browsers", len(uniqueBrowsers))
 }
 
 func main() {
